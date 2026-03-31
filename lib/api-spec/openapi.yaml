@@ -1,22 +1,31 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI-Powered Online Voting System with Fraud Detection API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: elections
+    description: Election management
+  - name: candidates
+    description: Candidate management
+  - name: votes
+    description: Voting operations
+  - name: fraud
+    description: Fraud detection
+  - name: dashboard
+    description: Dashboard and analytics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,306 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /elections:
+    get:
+      operationId: listElections
+      tags: [elections]
+      summary: List all elections
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, closed, upcoming]
+      responses:
+        "200":
+          description: List of elections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Election"
+    post:
+      operationId: createElection
+      tags: [elections]
+      summary: Create a new election
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateElectionRequest"
+      responses:
+        "201":
+          description: Election created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Election"
+
+  /elections/{id}:
+    get:
+      operationId: getElection
+      tags: [elections]
+      summary: Get a single election with candidates
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Election details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElectionDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    patch:
+      operationId: updateElection
+      tags: [elections]
+      summary: Update election status or details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateElectionRequest"
+      responses:
+        "200":
+          description: Updated election
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Election"
+
+  /elections/{id}/results:
+    get:
+      operationId: getElectionResults
+      tags: [elections]
+      summary: Get vote tallies for an election
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Election results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElectionResults"
+
+  /elections/{id}/candidates:
+    post:
+      operationId: addCandidate
+      tags: [candidates]
+      summary: Add a candidate to an election
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCandidateRequest"
+      responses:
+        "201":
+          description: Candidate added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Candidate"
+
+  /votes:
+    post:
+      operationId: castVote
+      tags: [votes]
+      summary: Cast a vote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CastVoteRequest"
+      responses:
+        "201":
+          description: Vote cast successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoteResponse"
+        "400":
+          description: Invalid vote or already voted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /votes/check:
+    get:
+      operationId: checkVoteStatus
+      tags: [votes]
+      summary: Check if voter has already voted in an election
+      parameters:
+        - in: query
+          name: electionId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: voterId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Vote status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoteStatus"
+
+  /fraud/alerts:
+    get:
+      operationId: listFraudAlerts
+      tags: [fraud]
+      summary: List fraud alerts
+      parameters:
+        - in: query
+          name: electionId
+          schema:
+            type: integer
+        - in: query
+          name: severity
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - in: query
+          name: resolved
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of fraud alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FraudAlert"
+
+  /fraud/alerts/{id}/resolve:
+    patch:
+      operationId: resolveFraudAlert
+      tags: [fraud]
+      summary: Mark a fraud alert as resolved
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveFraudAlertRequest"
+      responses:
+        "200":
+          description: Alert resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FraudAlert"
+
+  /fraud/analyze/{electionId}:
+    post:
+      operationId: analyzeElectionFraud
+      tags: [fraud]
+      summary: Trigger AI fraud analysis for an election
+      parameters:
+        - in: path
+          name: electionId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Fraud analysis results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FraudAnalysisResult"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent voting activity feed
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/fraud-stats:
+    get:
+      operationId: getFraudStats
+      tags: [dashboard]
+      summary: Get fraud detection statistics
+      responses:
+        "200":
+          description: Fraud statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FraudStats"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +340,345 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    Election:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [upcoming, active, closed]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        totalVotes:
+          type: integer
+        fraudScore:
+          type: number
+          description: AI-computed fraud risk score 0-100
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, title, status, startDate, endDate, totalVotes, fraudScore, createdAt]
+
+    ElectionDetail:
+      allOf:
+        - $ref: "#/components/schemas/Election"
+        - type: object
+          properties:
+            candidates:
+              type: array
+              items:
+                $ref: "#/components/schemas/Candidate"
+          required: [candidates]
+
+    CreateElectionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+      required: [title, startDate, endDate]
+
+    UpdateElectionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [upcoming, active, closed]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+
+    Candidate:
+      type: object
+      properties:
+        id:
+          type: integer
+        electionId:
+          type: integer
+        name:
+          type: string
+        party:
+          type: string
+        bio:
+          type: string
+        voteCount:
+          type: integer
+        percentage:
+          type: number
+      required: [id, electionId, name, voteCount, percentage]
+
+    CreateCandidateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        party:
+          type: string
+        bio:
+          type: string
+      required: [name]
+
+    CastVoteRequest:
+      type: object
+      properties:
+        electionId:
+          type: integer
+        candidateId:
+          type: integer
+        voterId:
+          type: string
+          description: Anonymous voter identifier
+        voterIp:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      required: [electionId, candidateId, voterId]
+
+    VoteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        voteId:
+          type: integer
+        fraudFlag:
+          type: boolean
+        message:
+          type: string
+      required: [success, voteId, fraudFlag]
+
+    VoteStatus:
+      type: object
+      properties:
+        hasVoted:
+          type: boolean
+        candidateId:
+          type: integer
+      required: [hasVoted]
+
+    ElectionResults:
+      type: object
+      properties:
+        election:
+          $ref: "#/components/schemas/Election"
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candidate"
+        totalVotes:
+          type: integer
+        turnoutPercentage:
+          type: number
+        fraudAlertCount:
+          type: integer
+        winner:
+          $ref: "#/components/schemas/Candidate"
+      required: [election, candidates, totalVotes, turnoutPercentage, fraudAlertCount]
+
+    FraudAlert:
+      type: object
+      properties:
+        id:
+          type: integer
+        electionId:
+          type: integer
+        electionTitle:
+          type: string
+        type:
+          type: string
+          enum: [duplicate_ip, rapid_voting, unusual_pattern, bot_behavior, coordinated_attack, suspicious_timing]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        affectedVotes:
+          type: integer
+        voterId:
+          type: string
+        voterIp:
+          type: string
+        resolved:
+          type: boolean
+        resolvedAt:
+          type: string
+          format: date-time
+        resolution:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, electionId, type, severity, description, affectedVotes, resolved, createdAt]
+
+    ResolveFraudAlertRequest:
+      type: object
+      properties:
+        resolution:
+          type: string
+        removeVotes:
+          type: boolean
+      required: [resolution]
+
+    FraudAnalysisResult:
+      type: object
+      properties:
+        electionId:
+          type: integer
+        analysisTimestamp:
+          type: string
+          format: date-time
+        overallRiskScore:
+          type: number
+        riskLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              description:
+                type: string
+              affectedVotes:
+                type: integer
+              severity:
+                type: string
+            required: [type, description, affectedVotes, severity]
+        alertsCreated:
+          type: integer
+        recommendation:
+          type: string
+      required: [electionId, analysisTimestamp, overallRiskScore, riskLevel, findings, alertsCreated, recommendation]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalElections:
+          type: integer
+        activeElections:
+          type: integer
+        totalVotesCast:
+          type: integer
+        fraudAlertsOpen:
+          type: integer
+        fraudAlertsResolved:
+          type: integer
+        electionsByStatus:
+          type: object
+          properties:
+            upcoming:
+              type: integer
+            active:
+              type: integer
+            closed:
+              type: integer
+          required: [upcoming, active, closed]
+        recentElections:
+          type: array
+          items:
+            $ref: "#/components/schemas/Election"
+      required: [totalElections, activeElections, totalVotesCast, fraudAlertsOpen, fraudAlertsResolved, electionsByStatus, recentElections]
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [vote_cast, fraud_detected, election_started, election_closed, alert_resolved]
+        description:
+          type: string
+        electionId:
+          type: integer
+        electionTitle:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, danger]
+        timestamp:
+          type: string
+          format: date-time
+      required: [id, type, description, electionId, electionTitle, severity, timestamp]
+
+    FraudStats:
+      type: object
+      properties:
+        totalAlerts:
+          type: integer
+        alertsByType:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              count:
+                type: integer
+            required: [type, count]
+        alertsBySeverity:
+          type: object
+          properties:
+            low:
+              type: integer
+            medium:
+              type: integer
+            high:
+              type: integer
+            critical:
+              type: integer
+          required: [low, medium, high, critical]
+        resolutionRate:
+          type: number
+        topRiskyElections:
+          type: array
+          items:
+            type: object
+            properties:
+              electionId:
+                type: integer
+              electionTitle:
+                type: string
+              fraudScore:
+                type: number
+              alertCount:
+                type: integer
+            required: [electionId, electionTitle, fraudScore, alertCount]
+      required: [totalAlerts, alertsByType, alertsBySeverity, resolutionRate, topRiskyElections]
