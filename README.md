@@ -53,9 +53,9 @@ pnpm run build
 
 ## Deployment
 
-The frontend is deployed through GitHub Pages at:
+The live deployment is hosted on Replit at:
 
-https://sayam-h069.github.io/secure_voting_AI/
+https://secure-vote-ai--hasheerhussainh.replit.app/
 
 The backend API is not hosted on GitHub Pages and needs a separate deployment target.
 
